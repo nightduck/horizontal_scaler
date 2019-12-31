@@ -23,11 +23,11 @@ def get_loads(droplet):
 # Request create of new droplets
 def create_droplets(num, start_index):
     # Create list of names for new droplets
-    names = ['wordpress-clone-%d' % i for i in range(num, num + start_index)]
+    names = ['wordpress-clone-%d' % i for i in range(start_index, start_index + num)]
 
     # TODO: Error handling
     digitalocean.Droplet.create_multiple(token=TOKEN, names=names, size="s-1vcpu-1gb", image=IMAGE_NAME, region="nyc3",
-                                         backups=False, ipv6=True, private_networking=None, tags="website")
+                                         backups=False, ipv6=True, private_networking=None, tags=["website"])
 
 
 # Get info from all website droplets, return them sorted by ones running and ones being started.
