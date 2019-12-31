@@ -2,13 +2,14 @@ import digitalocean
 import requests
 import math
 import json
+import re
 
 # Defaults, get overwritten with config file
 MAX_DROPLETS = 100
 POLL_PERIOD = 30
 TOKEN = "supersecretkeyhere"
-IMAGE_NAME = 50005064
-BASE_NAME = "wp-clone-%d"
+IMAGE_NAME = 0
+BASE_NAME = "wp-clone"
 ONE_MIN = 0
 FIVE_MIN = 1
 TEN_MIN = 2
@@ -16,18 +17,35 @@ TEN_MIN = 2
 
 # Get the IP address, get the load, put the 1m, 5m, and 10m avg loads in a list and append it to the droplet object
 def get_loads(droplet):
-    r = requests.get("http://" + droplet.ip_address + "/load.php")
-    droplet.loadavg = [float(l) for l in r.text.split(' ')[:3]]
+    try:
+        r = requests.get("http://" + droplet.ip_address + "/load.php")
+        droplet.loadavg = [float(l) for l in r.text.split(' ')[:3]]
+    except:
+        # TODO: Somehow report this error
+        pass
 
 
 # Request create of new droplets
-def create_droplets(num, start_index):
+def create_droplets(num):
     # Create list of names for new droplets
-    names = ['wordpress-clone-%d' % i for i in range(start_index, start_index + num)]
+    names = [BASE_NAME] * num
 
     # TODO: Error handling
     digitalocean.Droplet.create_multiple(token=TOKEN, names=names, size="s-1vcpu-1gb", image=IMAGE_NAME, region="nyc3",
                                          backups=False, ipv6=True, private_networking=None, tags=["website"])
+
+
+# Request deletion of droplets
+def delete_droplets(num, active_droplets):
+    active_droplets.sort(key=lambda d: d.created_at)
+
+    # Delete the oldest clones (but never the prime droplet)
+    i = 0
+    for d in active_droplets[1:num+1]:
+        d.destroy()
+        i += 1
+
+    return i
 
 
 # Get info from all website droplets, return them sorted by ones running and ones being started.
@@ -71,19 +89,27 @@ while True:
 
     # TODO: Do some health check on unresponsive droplets. Maybe it's a fluke, maybe they crashed
 
+    # TODO: Compare list of active droplets with list of IP addresses in nginx conf file. Update conf file and restart if appropriate
+
+
     # Find the total load on the cluster from the last minute average
-    total_load = sum([d.loadavg[ONE_MIN] for d in active_droplets])
-    if total_load == 0:     # In case there's no active droplets, set the load > 1 to trick the provisioning algorithm below
-        total_load = 0.01
+    recent_load = sum([d.loadavg[ONE_MIN] for d in active_droplets])
+    if recent_load == 0:     # In case there's no active droplets, set the load > 1 to trick the provisioning algorithm below
+        recent_load = 0.01
+
+    # Find the total load using the highest load (1min, 5min, 10min) from each droplet
+    prolonged_load = sum([max(d.loadavg) for d in active_droplets])
+    if recent_load == 0:     # If the prolonged_load is 0, the algorithm below might accidentally delete the prime droplet
+        recent_load = 0.01
 
     # Each droplet should have a load of no more than 1. If the total load exceeds the number of available droplets
     # (plus ones on the way), provision more
     num_usable_droplets = len(active_droplets) + len(inprogress_droplets)
-    if total_load > num_usable_droplets:
-        num_to_create = math.ceil(total_load) - num_usable_droplets
+    total_droplets = num_usable_droplets + len(unresponsive_droplets)
+    if recent_load > num_usable_droplets:
+        num_to_create = math.ceil(recent_load) - num_usable_droplets
 
         # There shouldn't be more than MAX_DROPLETS provisioned
-        total_droplets = num_usable_droplets + len(unresponsive_droplets)
         if num_to_create + total_droplets > MAX_DROPLETS:
             num_to_create = MAX_DROPLETS - total_droplets
             # TODO: Word the email differently if this is the case
@@ -92,4 +118,11 @@ while True:
 
         create_droplets(num_to_create, total_droplets)
 
-    # TODO: If no nodes provisioned in a while, delete nodes based on 15-minute load averages
+    elif prolonged_load < (len(active_droplets) - 1):
+        num_to_delete = len(active_droplets) - math.ceil(prolonged_load)
+
+        # Delete droplets, starting with the unresponsive ones
+        deleted = delete_droplets(num_to_delete, unresponsive_droplets)
+        delete_droplets(num_to_delete - deleted, active_droplets)
+
+    sleep(POLL_PERIOD)
