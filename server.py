@@ -1,3 +1,5 @@
+import time
+
 import digitalocean
 import requests
 import math
@@ -167,7 +169,7 @@ while True:
 
         # TODO: Send an email that x droplets are being provisioned
 
-        create_droplets(num_to_create, total_droplets)
+        create_droplets(num_to_create)
 
     elif prolonged_load < (len(active_droplets) - 1):
         num_to_delete = len(active_droplets) - math.ceil(prolonged_load)
@@ -176,4 +178,4 @@ while True:
         deleted = delete_droplets(num_to_delete, unresponsive_droplets)
         delete_droplets(num_to_delete - deleted, active_droplets)
 
-    sleep(POLL_PERIOD)
+    time.sleep(POLL_PERIOD)
