@@ -3,6 +3,7 @@ import requests
 import math
 import json
 import re
+import os
 
 # Defaults, get overwritten with config file
 MAX_DROPLETS = 100
@@ -24,6 +25,49 @@ def get_loads(droplet):
         # TODO: Somehow report this error
         pass
 
+
+# Reads in the current list of IP addresses from
+def get_load_balancer_IPs():
+    ips = []
+    with open("/etc/nginx/conf.d/load-balancer.conf") as fin:
+        for line in fin:
+            if re.search(r"server [0-9]+(?:\.[0-9]+){3}", line):
+                ips.append(re.search(r"[0-9]+(?:\.[0-9]+){3}", line)[0])
+
+    return ips
+
+
+# Updates the Nginx load balancer config file and restarts Nginx
+def write_load_balancer_IPs(addresses):
+    output = ""
+
+    with open("/etc/nginx/conf.d/load-balancer.conf", 'r') as fin:
+
+        # Read in the old load balancer and copy all the lines before the IP addresses
+        line = fin.readline()
+        while not re.search(r"server [0-9]+(?:\.[0-9]+){3}", line):
+            output += line
+            line = fin.readline()
+
+        # Write in the new addresses
+        for ip in addresses:
+            output += "\tserver " + ip + ";\n"
+
+        # Skip the old ip addresses in the file
+        while re.search(r"server [0-9]+(?:\.[0-9]+){3}", line):
+            line = fin.readline()
+
+        # Copy the rest of the lines
+        while line:
+            output += line
+            line = fin.readline()
+
+    # Update the conf file
+    with open("/etc/nginx/conf.d/load-balancer.conf", 'w') as fout:
+        fout.write(output)
+
+    # Restart the nginx server
+    os.system("systemctl restart nginx.service")
 
 # Request create of new droplets
 def create_droplets(num):
@@ -89,7 +133,14 @@ while True:
 
     # TODO: Do some health check on unresponsive droplets. Maybe it's a fluke, maybe they crashed
 
-    # TODO: Compare list of active droplets with list of IP addresses in nginx conf file. Update conf file and restart if appropriate
+    # Compare list of active droplets with list of IP addresses in nginx conf file.
+    # Update conf file and restart if appropriate
+    conf_ips = get_load_balancer_IPs()
+    active_ips = [d.ip_address for d in active_droplets]
+    conf_ips.sort()
+    active_ips.sort()
+    if conf_ips != active_ips:
+        write_load_balancer_IPs(active_ips)
 
 
     # Find the total load on the cluster from the last minute average
