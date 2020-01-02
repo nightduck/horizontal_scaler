@@ -82,12 +82,12 @@ def create_droplets(num):
 
 
 # Request deletion of droplets
-def delete_droplets(num, active_droplets):
-    active_droplets.sort(key=lambda d: d.created_at)
+def delete_droplets(num, droplets):
+    droplets.sort(key=lambda d: d.created_at)
 
     # Delete the oldest clones (but never the prime droplet)
     i = 0
-    for d in active_droplets[1:num+1]:
+    for d in droplets[:num]:
         d.destroy()
         i += 1
 
@@ -133,6 +133,11 @@ while True:
     unresponsive_droplets = list(filter(lambda d: not hasattr(d, 'loadavg'), active_droplets))
     active_droplets = list(filter(lambda d: hasattr(d, 'loadavg'), active_droplets))
 
+    # Sort lists by creation date
+    active_droplets.sort(key=lambda d : d.created_at)
+    inprogress_droplets.sort(key=lambda d : d.created_at)
+    unresponsive_droplets.sort(key=lambda d : d.created_at)
+
     # TODO: Do some health check on unresponsive droplets. Maybe it's a fluke, maybe they crashed
 
     # Compare list of active droplets with list of IP addresses in nginx conf file.
@@ -176,6 +181,6 @@ while True:
 
         # Delete droplets, starting with the unresponsive ones
         deleted = delete_droplets(num_to_delete, unresponsive_droplets)
-        delete_droplets(num_to_delete - deleted, active_droplets)
+        delete_droplets(num_to_delete - deleted, active_droplets[1:])
 
     time.sleep(POLL_PERIOD)
