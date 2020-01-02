@@ -1,0 +1,9 @@
+[Unit]
+Description=Updates Nginx load balancer confing to juggle horizontally scaled digitalocean droplets
+After=nginx.service
+
+[Service]
+Restart=always
+RestartSec=1
+User=root
+ExecStart=/bin/python3 /bin/horizontal_scaler/server.py
