@@ -140,15 +140,6 @@ while True:
 
     # TODO: Do some health check on unresponsive droplets. Maybe it's a fluke, maybe they crashed
 
-    # Compare list of active droplets with list of IP addresses in nginx conf file.
-    # Update conf file and restart if appropriate
-    conf_ips = get_load_balancer_IPs()
-    active_ips = [d.ip_address for d in active_droplets]
-    conf_ips.sort()
-    active_ips.sort()
-    if conf_ips != active_ips:
-        write_load_balancer_IPs(active_ips)
-
 
     # Find the total load on the cluster from the last minute average
     recent_load = sum([d.loadavg[ONE_MIN] for d in active_droplets])
@@ -182,5 +173,14 @@ while True:
         # Delete droplets, starting with the unresponsive ones
         deleted = delete_droplets(num_to_delete, unresponsive_droplets)
         delete_droplets(num_to_delete - deleted, active_droplets[1:])
+
+    # Compare list of active droplets with list of IP addresses in nginx conf file.
+    # Update conf file and restart if appropriate
+    conf_ips = get_load_balancer_IPs()
+    active_ips = [d.ip_address for d in active_droplets]
+    conf_ips.sort()
+    active_ips.sort()
+    if conf_ips != active_ips:
+        write_load_balancer_IPs(active_ips)
 
     time.sleep(POLL_PERIOD)
