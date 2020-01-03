@@ -99,6 +99,7 @@ def delete_droplets(num, droplets):
 # Get info from all website droplets, return them sorted by ones running and ones being started.
 # Running droplets will be polled for average load
 def get_droplets(manager):
+    # TODO: Handle errors here
     droplets = manager.get_all_droplets(tag_name="website")
 
     active_droplets = list(filter(lambda d: d.status == 'active', droplets))
