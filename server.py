@@ -8,6 +8,8 @@ import math
 import json
 import re
 import os
+import smtplib
+from email.mime.text import MIMEText
 
 # Defaults, get overwritten with config file
 MAX_DROPLETS = 100
@@ -18,6 +20,7 @@ BASE_NAME = "wp-clone"
 ONE_MIN = 0
 FIVE_MIN = 1
 TEN_MIN = 2
+EMAIL = "user@example.com"
 
 
 # Get the IP address, get the load, put the 1m, 5m, and 10m avg loads in a list and append it to the droplet object
@@ -39,6 +42,16 @@ def get_load_balancer_IPs():
                 ips.append(re.search(r"[0-9]+(?:\.[0-9]+){3}", line)[0])
 
     return ips
+
+
+# Sends an email to me
+def send_email(msg):
+    email = MIMEText("\n" + msg + "\n")
+    email['Subject'] = "Text message"
+    email['To'] = EMAIL
+    email['From'] = "postmaster@%s" % os.uname().nodename
+    s = smtplib.SMTP('localhost')
+    s.ehlo()
 
 
 # Updates the Nginx load balancer config file and restarts Nginx
@@ -72,6 +85,7 @@ def write_load_balancer_IPs(addresses):
 
     # Restart the nginx server
     os.system("systemctl restart nginx.service")
+
 
 # Request create of new droplets
 def create_droplets(num):
@@ -125,10 +139,12 @@ with open("config.json", 'r') as readin:
         IMAGE_NAME = data["image_name"]
     if "base_name" in data:
         BASE_NAME = data["base_name"]
+    if "email" in data:
+        EMAIL = data["email"]
 
 # Write to log file that server is starting
 with open("server.log", "a") as log:
-    log.write(str(datetime.datetime.now()) + ": Starting server")
+    log.write(str(datetime.datetime.now()) + ": Starting server\n")
 
 manager = digitalocean.Manager(token=TOKEN)
 
@@ -147,10 +163,11 @@ while True:
 
     # TODO: Do some health check on unresponsive droplets. Maybe it's a fluke, maybe they crashed
 
-    # Write to log file that server is starting
-    with open("server.log", "a") as log:
-        log.write(str(datetime.datetime.now()) + ": %d droplets winding up, %d droplets running, %d droplets unresponsive"
-                  % (len(inprogress_droplets), len(active_droplets), len(unresponsive_droplets)))
+    # Write to log file what the status of droplets are (except for the common case)
+    if not (len(inprogress_droplets) == 0 and len(active_droplets) == 1 and len(unresponsive_droplets) == 0):
+        with open("server.log", "a") as log:
+            log.write(str(datetime.datetime.now()) + ": %d droplets winding up, %d droplets running, %d droplets unresponsive\n"
+                      % (len(inprogress_droplets), len(active_droplets), len(unresponsive_droplets)))
 
     # Find the total load on the cluster from the last minute average
     recent_load = sum([d.loadavg[ONE_MIN] for d in active_droplets])
@@ -178,7 +195,7 @@ while True:
 
         # Write to log file that droplets are being created
         with open("server.log", "a") as log:
-            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for creation" % (num_to_create))
+            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for creation\n" % (num_to_create))
 
         create_droplets(num_to_create)
 
@@ -187,7 +204,7 @@ while True:
 
         # Write to log file that droplets are being deleted
         with open("server.log", "a") as log:
-            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for deletion" % (num_to_delete))
+            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for deletion\n" % (num_to_delete))
 
         # Delete droplets, starting with the unresponsive ones
         deleted = delete_droplets(num_to_delete, unresponsive_droplets)
@@ -205,6 +222,6 @@ while True:
 
         # Write to log file that Nginx conf file was updated
         with open("server.log", "a") as log:
-            log.write(str(datetime.datetime.now()) + ": load-balancer.conf was updated")
+            log.write(str(datetime.datetime.now()) + ": load-balancer.conf was updated\n")
 
     time.sleep(POLL_PERIOD)

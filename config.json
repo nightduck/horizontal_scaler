@@ -1,4 +1,5 @@
 {
   "token" : "supersecretkeyhere",
-  "image_name" : 12345678
+  "image_name" : 12345678,
+  "email" : "user@example.com"
 }
