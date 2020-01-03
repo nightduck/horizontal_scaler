@@ -208,8 +208,8 @@ while True:
 
         # Delete droplets, starting with the unresponsive ones
         deleted = delete_droplets(num_to_delete, unresponsive_droplets)
-        deleted = delete_droplets(num_to_delete - deleted, active_droplets)
-        active_droplets = active_droplets[deleted:]
+        deleted = delete_droplets(num_to_delete - deleted, active_droplets[1:])
+        active_droplets = [active_droplets[0]] + active_droplets[1:deleted+1]
 
     # Compare list of active droplets with list of IP addresses in nginx conf file.
     # Update conf file and restart if appropriate
