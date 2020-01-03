@@ -7,4 +7,4 @@ After=nginx.service
 Restart=always
 RestartSec=1
 User=root
-ExecStart=/bin/python3 /bin/horizontal_scaler/server.py
+ExecStart=python3 /usr/bin/horizontal_scaler/server.py
