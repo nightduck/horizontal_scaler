@@ -11,6 +11,8 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 
+# TODO: Install these imports (esp digitalocean) in the install
+
 # Defaults, get overwritten with config file
 MAX_DROPLETS = 100
 POLL_PERIOD = 30
@@ -68,7 +70,7 @@ def write_load_balancer_IPs(addresses):
 
         # Write in the new addresses
         for ip in addresses:
-            output += "\tserver " + ip + ":443;\n"
+            output += "\t\tserver " + ip + ":443;\n"
 
         # Skip the old ip addresses in the file
         while re.search(r"server [0-9]+(?:\.[0-9]+){3}", line):
