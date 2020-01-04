@@ -36,7 +36,7 @@ def get_loads(droplet):
 # Reads in the current list of IP addresses from
 def get_load_balancer_IPs():
     ips = []
-    with open("/etc/nginx/conf.d/load-balancer.conf") as fin:
+    with open("/etc/nginx/nginx.conf") as fin:
         for line in fin:
             if re.search(r"server [0-9]+(?:\.[0-9]+){3}", line):
                 ips.append(re.search(r"[0-9]+(?:\.[0-9]+){3}", line)[0])
@@ -58,7 +58,7 @@ def send_email(msg):
 def write_load_balancer_IPs(addresses):
     output = ""
 
-    with open("/etc/nginx/conf.d/load-balancer.conf", 'r') as fin:
+    with open("/etc/nginx/nginx.conf", 'r') as fin:
 
         # Read in the old load balancer and copy all the lines before the IP addresses
         line = fin.readline()
@@ -68,7 +68,7 @@ def write_load_balancer_IPs(addresses):
 
         # Write in the new addresses
         for ip in addresses:
-            output += "\tserver " + ip + ";\n"
+            output += "\tserver " + ip + ":443;\n"
 
         # Skip the old ip addresses in the file
         while re.search(r"server [0-9]+(?:\.[0-9]+){3}", line):
@@ -80,11 +80,11 @@ def write_load_balancer_IPs(addresses):
             line = fin.readline()
 
     # Update the conf file
-    with open("/etc/nginx/conf.d/load-balancer.conf", 'w') as fout:
+    with open("/etc/nginx/nginx.conf", 'w') as fout:
         fout.write(output)
 
     # Restart the nginx server
-    os.system("systemctl restart nginx.service")
+    os.system("systemctl reload nginx.service")
 
 
 # Request create of new droplets
@@ -222,6 +222,6 @@ while True:
 
         # Write to log file that Nginx conf file was updated
         with open("server.log", "a") as log:
-            log.write(str(datetime.datetime.now()) + ": load-balancer.conf was updated\n")
+            log.write(str(datetime.datetime.now()) + ": nginx.conf was updated\n")
 
     time.sleep(POLL_PERIOD)
