@@ -132,6 +132,8 @@ def get_droplets(manager):
 
 
 # Program starts here
+manager = digitalocean.Manager(token=TOKEN)
+
 with open("config.json", 'r') as readin:
     data = json.load(readin)
 
@@ -143,6 +145,9 @@ with open("config.json", 'r') as readin:
         TOKEN = data["token"]
     if "image_name" in data:
         IMAGE_NAME = data["image_name"]
+    else:   # If the config doesn't specify image name, get the most recent wordpress snapshot
+        snapshots = list(filter(lambda w : w.name.find("wordpress") == 0, manager.get_all_snapshots()))
+        IMAGE_NAME = int(max(snapshots, key=lambda s : s.created_at).id)
     if "base_name" in data:
         BASE_NAME = data["base_name"]
     if "email" in data:
@@ -153,8 +158,6 @@ with open("config.json", 'r') as readin:
 # Write to log file that server is starting
 with open("server.log", "a") as log:
     log.write(str(datetime.datetime.now()) + ": Starting server\n")
-
-manager = digitalocean.Manager(token=TOKEN)
 
 while True:
     # Get list of all web server droplets, both running and ones being provisioned. Get the average load of ones running
