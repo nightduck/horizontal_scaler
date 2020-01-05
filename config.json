@@ -1,6 +1,5 @@
 {
   "token" : "supersecretkeyhere",
-  "image_name" : 12345678,
   "email" : "user@example.com",
   "load_per_droplet" : 2
 }

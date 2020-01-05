@@ -207,7 +207,8 @@ while True:
 
         # Write to log file that droplets are being created
         with open("server.log", "a") as log:
-            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for creation\n" % num_to_create)
+            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for creation. Total 1m load: %d\n"
+                      % (num_to_create, recent_load))
 
         create_droplets(num_to_create)
 
@@ -216,7 +217,8 @@ while True:
 
         # Write to log file that droplets are being deleted
         with open("server.log", "a") as log:
-            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for deletion\n" % num_to_delete)
+            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for deletion. Total 1m load: %d\n"
+                      % (num_to_delete, recent_load))
 
         # Delete droplets, starting with the unresponsive ones
         deleted = delete_droplets(num_to_delete, unresponsive_droplets)
