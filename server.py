@@ -161,7 +161,7 @@ if IMAGE_NAME == 0:
     snapshots = list(filter(lambda w: w.name.find("wordpress") == 0, manager.get_all_snapshots()))
     IMAGE_NAME = int(max(snapshots, key=lambda s: s.created_at).id)
 
-
+droplet_status = (0,0,0)
 while True:
     # Get list of all web server droplets, both running and ones being provisioned. Get the average load of ones running
     active_droplets, inprogress_droplets = get_droplets(manager)
