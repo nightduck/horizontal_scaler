@@ -17,11 +17,12 @@ from email.mime.text import MIMEText
 MAX_DROPLETS = 100
 POLL_PERIOD = 30
 TOKEN = "supersecretkeyhere"
-IMAGE_NAME = 0
+IMAGE_NAME = 0              # TODO: If this is not specified in the config file, make it the ID of the most recent wordpress snapshot
 BASE_NAME = "wp-clone"
 ONE_MIN = 0
 FIVE_MIN = 1
 TEN_MIN = 2
+LOAD_PER_DROPLET = 1
 EMAIL = "user@example.com"
 
 
@@ -115,8 +116,11 @@ def delete_droplets(num, droplets):
 # Get info from all website droplets, return them sorted by ones running and ones being started.
 # Running droplets will be polled for average load
 def get_droplets(manager):
-    # TODO: Handle errors here
-    droplets = manager.get_all_droplets(tag_name="website")
+    try:
+        droplets = manager.get_all_droplets(tag_name="website")
+    except Exception as err:
+        with open("server.log", "a") as log:
+            log.write(err)
 
     active_droplets = list(filter(lambda d: d.status == 'active', droplets))
     new_droplets = list(filter(lambda d: d.status == 'new', droplets))
@@ -143,6 +147,8 @@ with open("config.json", 'r') as readin:
         BASE_NAME = data["base_name"]
     if "email" in data:
         EMAIL = data["email"]
+    if "load_per_droplet" in data:
+        LOAD_PER_DROPLET = data["load_per_droplet"]
 
 # Write to log file that server is starting
 with open("server.log", "a") as log:
@@ -165,28 +171,29 @@ while True:
 
     # TODO: Do some health check on unresponsive droplets. Maybe it's a fluke, maybe they crashed
 
-    # Write to log file what the status of droplets are (except for the common case)
-    if not (len(inprogress_droplets) == 0 and len(active_droplets) == 1 and len(unresponsive_droplets) == 0):
+    # Write to log file what the status of droplets are (assuming the counts have changed
+    if droplet_status != (len(inprogress_droplets), len(active_droplets), len(unresponsive_droplets)):
+        droplet_status = (len(inprogress_droplets), len(active_droplets), len(unresponsive_droplets))
         with open("server.log", "a") as log:
-            log.write(str(datetime.datetime.now()) + ": %d droplets winding up, %d droplets running, %d droplets unresponsive\n"
-                      % (len(inprogress_droplets), len(active_droplets), len(unresponsive_droplets)))
+            log.write(str(datetime.datetime.now())
+                      + ": %d droplets winding up, %d droplets running, %d droplets unresponsive\n" % droplet_status)
 
     # Find the total load on the cluster from the last minute average
     recent_load = sum([d.loadavg[ONE_MIN] for d in active_droplets])
-    if recent_load == 0:     # In case there's no active droplets, set the load > 1 to trick the provisioning algorithm below
+    if recent_load == 0:     # In case there's no active droplets, set the load > 1 to trick the provisioning algorithm
         recent_load = 0.01
 
     # Find the total load using the highest load (1min, 5min, 10min) from each droplet
     prolonged_load = sum([max(d.loadavg) for d in active_droplets])
-    if recent_load == 0:     # If the prolonged_load is 0, the algorithm below might accidentally delete the prime droplet
+    if recent_load == 0:     # If the prolonged_load is 0, the elif below might accidentally delete the prime droplet
         recent_load = 0.01
 
     # Each droplet should have a load of no more than 1. If the total load exceeds the number of available droplets
     # (plus ones on the way), provision more
     num_usable_droplets = len(active_droplets) + len(inprogress_droplets)
     total_droplets = num_usable_droplets + len(unresponsive_droplets)
-    if recent_load > num_usable_droplets:
-        num_to_create = math.ceil(recent_load) - num_usable_droplets
+    if recent_load > num_usable_droplets * LOAD_PER_DROPLET:
+        num_to_create = math.ceil(recent_load) - num_usable_droplets * LOAD_PER_DROPLET
 
         # There shouldn't be more than MAX_DROPLETS provisioned
         if num_to_create + total_droplets > MAX_DROPLETS:
@@ -197,16 +204,16 @@ while True:
 
         # Write to log file that droplets are being created
         with open("server.log", "a") as log:
-            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for creation\n" % (num_to_create))
+            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for creation\n" % num_to_create)
 
         create_droplets(num_to_create)
 
-    elif prolonged_load < (len(active_droplets) - 1):
-        num_to_delete = len(active_droplets) - math.ceil(prolonged_load)
+    elif prolonged_load < (len(active_droplets) - 1) * LOAD_PER_DROPLET:
+        num_to_delete = len(active_droplets) * LOAD_PER_DROPLET - math.ceil(prolonged_load)
 
         # Write to log file that droplets are being deleted
         with open("server.log", "a") as log:
-            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for deletion\n" % (num_to_delete))
+            log.write(str(datetime.datetime.now()) + ": %d droplets ordered for deletion\n" % num_to_delete)
 
         # Delete droplets, starting with the unresponsive ones
         deleted = delete_droplets(num_to_delete, unresponsive_droplets)
@@ -216,10 +223,10 @@ while True:
     # Compare list of active droplets with list of IP addresses in nginx conf file.
     # Update conf file and restart if appropriate
     conf_ips = get_load_balancer_IPs()
-    active_ips = [d.ip_address for d in active_droplets]
+    active_ips = [d.private_ip_address for d in active_droplets]
     conf_ips.sort()
     active_ips.sort()
-    if conf_ips != active_ips and len(active_ips) > 0:  # If the lists mismatch and it's not because of unresponsive droplets
+    if conf_ips != active_ips and len(active_ips) > 0:  # If the lists mismatch and not because of unresponsive droplets
         write_load_balancer_IPs(active_ips)
 
         # Write to log file that Nginx conf file was updated
