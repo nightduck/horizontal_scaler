@@ -3,6 +3,7 @@
 try:
     import time
     import datetime
+    import traceback
     import digitalocean
     import requests
     import math
@@ -102,7 +103,7 @@ def create_droplets(num):
 
     # TODO: Error handling
     digitalocean.Droplet.create_multiple(token=TOKEN, names=names, size="s-1vcpu-1gb", image=IMAGE_NAME, region="nyc3",
-                                         backups=False, ipv6=True, private_networking=None, tags=["website"])
+                                         backups=False, ipv6=True, private_networking=True, tags=["website"])
 
 
 # Request deletion of droplets
@@ -250,4 +251,4 @@ try:
         time.sleep(POLL_PERIOD)
 except Exception as err:
     with open("server.log", "a") as log:
-        log.write(err)
+        traceback.print_exc(file=log)
