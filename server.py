@@ -11,7 +11,6 @@ try:
     import os
     import smtplib
     from email.mime.text import MIMEText
-    import asdf
 except ImportError as err:
     with open("server.log", "a") as log:
         log.write(err.msg + "\n")
