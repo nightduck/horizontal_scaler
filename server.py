@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 
-import time
-import datetime
-import digitalocean
-import requests
-import math
-import json
-import re
-import os
-import smtplib
-from email.mime.text import MIMEText
+try:
+    import time
+    import datetime
+    import digitalocean
+    import requests
+    import math
+    import json
+    import re
+    import os
+    import smtplib
+    from email.mime.text import MIMEText
+    import asdf
+except ImportError as err:
+    with open("server.log", "a") as log:
+        log.write(err.msg + "\n")
+    raise
 
 # TODO: Install these imports (esp digitalocean) in the install
 

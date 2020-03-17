@@ -19,11 +19,13 @@
  load.php to the root directory of your website to handle that.
  2) The load balancer is set to redirect to any droplet with the tag "website", so add that tag to your web server
  droplet
- 3) Create a new droplet, the $5 one works, with Nginx installed on it. Install the digitalocean python bindings with
- `pip install -U python-digitalocean`. Clone this repository onto this scaler droplet and run the install.sh script.
+ 3) Create a new droplet, the $5 one works, with Nginx installed on it.
+ 4) Install the digitalocean python bindings with `sudo pip install -U python-digitalocean`. This package needs to be
+ visible to the root user. 
+ 5) Clone this repository onto the scaler droplet in step 3 and run the install.sh script.
  You will find the files installed in /usr/bin/horizontal_scaler, including config.json. That's important.
- 4) Run `sudo systemctl horizontal_scaler.service start` to run the service
- 5) Your digitalocean API token is required in order to automatically provision new droplets. You can create an API key
+ 6) Run `sudo systemctl horizontal_scaler.service start` to run the service
+ 7) Your digitalocean API token is required in order to automatically provision new droplets. You can create an API key
  on the digitalocean dashboard (be sure to make one with write privileges). Add this token to config.json, as the value
  for "token".
  
