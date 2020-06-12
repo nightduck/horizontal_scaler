@@ -12,5 +12,4 @@ with open("config.json", 'r') as readin:
 manager = digitalocean.Manager(token=TOKEN)
 
 # If image ID not specified, default is the most recent wordpress snapshot
-snapshots = list(filter(lambda w: w.name.find("wordpress") == 0, manager.get_all_snapshots()))
-print(snapshots)
+print(manager.get_all_snapshots())

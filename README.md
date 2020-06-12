@@ -51,7 +51,8 @@ The API key for your digitalocean account. Required
 
 The ID of the snapshot to clone whenever provisioning new droplets. Be sure to update it everytime you take a new
 snapshot of your website. If not specified, the scaler will use the most recently created image. Must be an 8 digit
-number (as of March 2020).
+number (as of March 2020). To get a list of all snapshots on your machine along with their IDs, run
+`python3 get_snapshot.id.py` (this requires your token be in the config.json file).
 
 #### base_name
 
