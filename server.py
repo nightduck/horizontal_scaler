@@ -213,6 +213,8 @@ try:
                 num_to_create = MAX_DROPLETS - total_droplets
                 # TODO: Word the email differently if this is the case
 
+            # Can't create more than 10 at a time
+            num_to_create = min(num_to_create, 10)
             # TODO: Send an email that x droplets are being provisioned
 
             # Write to log file that droplets are being created
