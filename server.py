@@ -30,7 +30,7 @@ FIVE_MIN = 1
 TEN_MIN = 2
 LOAD_PER_DROPLET = 1
 EMAIL = "user@example.com"
-BOOTUP_TIME = 140
+BOOTUP_TIME = 60
 LOAD_PORT = 3337
 
 
@@ -165,6 +165,8 @@ with open("config.json", 'r') as readin:
         EMAIL = data["email"]
     if "load_per_droplet" in data:
         LOAD_PER_DROPLET = data["load_per_droplet"]
+    if "bootup_time" in data:
+        BOOTUP_TIME = data["bootup_time"]
 
 # Write to log file that server is starting
 with open("server.log", "a") as log:
@@ -235,7 +237,7 @@ try:
             create_droplets(num_to_create)
 
         elif prolonged_load < (len(active_droplets) - 1) * LOAD_PER_DROPLET:
-            num_to_delete = len(active_droplets) * LOAD_PER_DROPLET - math.ceil(prolonged_load)
+            num_to_delete = (len(active_droplets) * LOAD_PER_DROPLET - math.ceil(prolonged_load)) / LOAD_PER_DROPLET
 
             # Write to log file that droplets are being deleted
             with open("server.log", "a") as log:

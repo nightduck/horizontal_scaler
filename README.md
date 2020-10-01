@@ -70,3 +70,7 @@ Designates the upper limit each web server droplet is allowed to carry. Once the
 droplet is provisioned. It should typically be equal to the number of cores on that droplet. Default is 1, personally
 I use 2.
  
+#### bootup_time
+
+The time after a droplet is created where it's still classfied as "inprogress", giving time for the OS to situate itself
+before taking on a load
