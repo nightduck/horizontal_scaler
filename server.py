@@ -237,7 +237,7 @@ try:
             create_droplets(num_to_create)
 
         elif prolonged_load < (len(active_droplets) - 1) * LOAD_PER_DROPLET:
-            num_to_delete = (len(active_droplets) * LOAD_PER_DROPLET - math.ceil(prolonged_load)) / LOAD_PER_DROPLET
+            num_to_delete = int((len(active_droplets) * LOAD_PER_DROPLET - math.ceil(prolonged_load)) / LOAD_PER_DROPLET)
 
             # Write to log file that droplets are being deleted
             with open("server.log", "a") as log:
