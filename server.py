@@ -20,7 +20,7 @@ except ImportError as err:
 # TODO: Install these imports (esp digitalocean) in the install
 
 # Defaults, get overwritten with config file
-MAX_DROPLETS = 100
+MAX_DROPLETS = 10
 POLL_PERIOD = 30
 TOKEN = "supersecretkeyhere"
 IMAGE_NAME = 0              # TODO: If this is not specified in the config file, make it the ID of the most recent wordpress snapshot
@@ -30,15 +30,21 @@ FIVE_MIN = 1
 TEN_MIN = 2
 LOAD_PER_DROPLET = 1
 EMAIL = "user@example.com"
+BOOTUP_TIME = 140
+LOAD_PORT = 3337
 
 
 # Get the IP address, get the load, put the 1m, 5m, and 10m avg loads in a list and append it to the droplet object
 def get_loads(droplet):
     try:
-        r = requests.get("http://" + droplet.ip_address + "/load.php")
-        droplet.loadavg = [float(l) for l in r.text.split(' ')[:3]]
-    except:
+        r = requests.get("http://" + droplet.private_ip_address + ":" + str(LOAD_PORT))
+        uptime = r.text.split("\n")[0]
+        loads = r.text.split("\n")[1]
+        droplet.loadavg = [float(l) for l in loads.split(' ')[0:3]]
+        droplet.uptime = float(uptime.split(' ')[0])
+    except Exception as err:
         # TODO: Somehow report this error
+        droplet.uptime = 0
         pass
 
 
@@ -121,7 +127,7 @@ def delete_droplets(num, droplets):
 
 
 # Get info from all website droplets, return them sorted by ones running and ones being started.
-# Running droplets will be polled for average load
+# Running droplets will be polled for average load.
 def get_droplets(manager):
     try:
         droplets = manager.get_all_droplets(tag_name="website")
@@ -134,6 +140,9 @@ def get_droplets(manager):
 
     for d in active_droplets:
         get_loads(d)
+
+    new_droplets += list(filter(lambda d: d.uptime <= BOOTUP_TIME, active_droplets))
+    active_droplets = list(filter(lambda d: d.uptime > BOOTUP_TIME, active_droplets))
 
     return active_droplets, new_droplets
 
@@ -236,7 +245,7 @@ try:
             # Delete droplets, starting with the unresponsive ones
             deleted = delete_droplets(num_to_delete, unresponsive_droplets)
             deleted = delete_droplets(num_to_delete - deleted, active_droplets[1:])
-            active_droplets = [active_droplets[0]] + active_droplets[1:deleted+1]
+            active_droplets = [active_droplets[0]] + active_droplets[1+deleted:]
 
         # Compare list of active droplets with list of IP addresses in nginx conf file.
         # Update conf file and restart if appropriate

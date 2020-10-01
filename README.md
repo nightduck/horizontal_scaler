@@ -36,7 +36,8 @@ Multiple attributes can be added to config.json, most are optional and have prep
 #### max_droplets
 
 As a guard against DDoS attacks driving up your usage bill, you can set an upper cap to the number of droplets your
-scaler is allowed to provision. Default is 100
+scaler is allowed to provision. Default is 10. Note that this should not exceed your droplet limit in Digitalocean,
+found under Account>Settings.
 
 #### poll_period
 
