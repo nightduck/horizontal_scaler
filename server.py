@@ -108,7 +108,7 @@ def create_droplets(num):
     names = [BASE_NAME] * num
 
     # TODO: Error handling
-    digitalocean.Droplet.create_multiple(token=TOKEN, names=names, size="s-1vcpu-1gb", image=IMAGE_NAME, region="nyc3",
+    digitalocean.Droplet.create_multiple(token=TOKEN, names=names, size="s-1vcpu-2gb", image=IMAGE_NAME, region="nyc3",
                                          backups=False, ipv6=True, private_networking=True, monitoring=True,
                                          tags=["website"])
 
